@@ -156,8 +156,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1); // sonic wave motor PWM
   SetSonicMotor(90);
 
-  LED0_Write(1);
-  LED1_Write(1);
+  // LED0_Write(1);
+  // LED1_Write(1);
 
   Scene_init(&ShinxScene1);
 
@@ -166,7 +166,7 @@ int main(void)
   /* USER CODE END 2 */
   /* Infinite loop */
     /* USER CODE BEGIN WHILE */
-    CarCmd cmd;
+  CarCmd cmd;
   while (1)
     {
 //	  Sensor_Static_Test();
@@ -219,9 +219,12 @@ int main(void)
 		  switch (cmd.type) {
 		      case 100:
 		    	  su7mode = CONTROL_MODE;
+            Motor_SetSpeedLR(0, 0);
+            IRFollow_Init();
 		    	  break;
 		      case 200:
 		    	  su7mode = IR_FOLLOW_MODE;
+            Motor_SetSpeedLR(0, 0);
 		    	  break;
 		      default:
 		    	  safe_check = 1;
@@ -231,7 +234,7 @@ int main(void)
   if (su7mode == IR_FOLLOW_MODE) {
     // 红外跟随模式：运行跟随循环
     IRTrack_Loop();
-    continue; // 本轮不再处理命令队列
+    continue; 
   }
 
   if (safe_check) {

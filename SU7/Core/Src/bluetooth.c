@@ -6,9 +6,11 @@
 #include "scene.h"
 #include "sonic.h"
 
+extern uint8_t rx_data; // 使用 main.c 中定义的 rx_data，和 stm32f1xx_it.c 保持一致
+
 void set_bluetooth_huart(UART_HandleTypeDef *h) { huart = h; }
 
-void start_bluetooth_IT() { HAL_UART_Receive_IT(huart, &proto_code, 1); }
+void start_bluetooth_IT() { HAL_UART_Receive_IT(huart, &rx_data, 1); }  // 改用 rx_data
 
 void stop_bluetooth_IT() { HAL_UART_AbortReceive_IT(huart); }
 

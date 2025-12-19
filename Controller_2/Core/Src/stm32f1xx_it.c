@@ -22,6 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,7 +42,13 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+// 红外跟随模式的中断接收缓冲
+#define IR_RX_BUF_SIZE 128
+volatile char ir_rx_buf[IR_RX_BUF_SIZE];
+volatile uint8_t ir_rx_head = 0;
+volatile uint8_t ir_rx_tail = 0;
+volatile uint8_t ir_rx_byte = 0;  // 单字节接收缓冲
+volatile uint32_t ir_rx_total = 0; // 调试：总接收字节数
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -213,5 +220,51 @@ void USART2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+// 启动红外跟随模式的中断接收
+void IR_StartReceive(void)
+{
+    ir_rx_head = 0;
+    ir_rx_tail = 0;
+    ir_rx_total = 0;
+    HAL_UART_Receive_IT(&huart2, (uint8_t*)&ir_rx_byte, 1);
+}
 
+// 停止红外跟随模式的中断接收
+void IR_StopReceive(void)
+{
+    HAL_UART_AbortReceive_IT(&huart2);
+}
+
+// 获取总接收字节数（调试用）
+uint32_t IR_GetRxTotal(void)
+{
+    return ir_rx_total;
+}
+
+// 从环形缓冲区读取一个字符，返回 -1 表示无数据
+int IR_GetChar(void)
+{
+    if (ir_rx_head == ir_rx_tail) return -1;
+    char c = ir_rx_buf[ir_rx_tail];
+    ir_rx_tail = (ir_rx_tail + 1) % IR_RX_BUF_SIZE;
+    return (int)(uint8_t)c;
+}
+
+// UART 接收完成回调
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART2)
+    {
+        // 将接收到的字节存入环形缓冲区
+        uint8_t next = (ir_rx_head + 1) % IR_RX_BUF_SIZE;
+        if (next != ir_rx_tail) { // 缓冲区未满
+            ir_rx_buf[ir_rx_head] = (char)ir_rx_byte;
+            ir_rx_head = next;
+        }
+        ir_rx_total++;
+        
+        // 继续接收下一个字节
+        HAL_UART_Receive_IT(&huart2, (uint8_t*)&ir_rx_byte, 1);
+    }
+}
 /* USER CODE END 1 */
